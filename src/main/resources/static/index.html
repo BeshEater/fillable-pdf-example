@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+<h2>Available URLs</h2>
+<div>
+    <a href="/user-ui.html">Main UI</a></br>
+    <a href="/test/simpleString">Simple test string</a></br>
+    <a href="/test/envVariables">Custom env variables</a></br>
+    <a href="/test/envVariables/other">Custom env variables from another app</a></br>
+
+    <h2>Upload file</h2>
+    <form action="/file" method="post" enctype="multipart/form-data">
+        <label for="file">File</label>
+        <input id="file" name="file" type="file" />
+        <button>Upload</button>
+    </form>
+
+    <h2>Download file</h2>
+    <a href="/file" download>Download file</a>
+</div>
+</body>
+</html>
