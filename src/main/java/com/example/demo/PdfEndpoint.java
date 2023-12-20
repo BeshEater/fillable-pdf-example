@@ -2,14 +2,19 @@ package com.example.demo;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.IOUtils;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
+import org.apache.pdfbox.pdfwriter.compress.CompressParameters;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 @Slf4j
@@ -31,19 +36,50 @@ public class PdfEndpoint {
                 .body(byteArrayResource);
     }
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
-    public String upload(@RequestParam("file") MultipartFile file) throws IOException {
-        FILE_NAME = file.getOriginalFilename();
-        FILE_CONTENT = file.getBytes();
-        var infoString = "Successfully uploaded file: " + file.getOriginalFilename() + " | " + "size: " + file.getBytes().length + " bytes";
-        log.info(infoString);
-        return infoString;
+    @GetMapping(value = "/prefilled", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<Resource> downloadPrefilled() throws IOException {
+        log.info("Started downloading file prefilled pdf file");
+        var initialPdfFileContent = IOUtils.resourceToByteArray("/static/fillable_PDF_form_example.pdf");
+        var prefilledPdfFileContent = prefillPdfFile(initialPdfFileContent);
+
+        var byteArrayResource = new ByteArrayResource(prefilledPdfFileContent);
+        return ResponseEntity.ok()
+                .contentLength(byteArrayResource.contentLength())
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(byteArrayResource);
     }
 
-    @PostMapping("/reset")
-    public void resetSavedFile(@RequestParam("file") MultipartFile file) throws IOException {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
+    public void upload(@RequestParam("file") MultipartFile file) throws IOException {
         FILE_NAME = file.getOriginalFilename();
         FILE_CONTENT = file.getBytes();
-        log.info("Successfully rest saved file to default pdf");
+        logPdfFormInfo(file.getBytes());
+        log.info("Successfully uploaded file: " + file.getOriginalFilename() + " | " + "size: " + file.getBytes().length + " bytes");
+    }
+
+    private byte[] prefillPdfFile(byte[] pdfFileContent) throws IOException {
+        var byteArrayOutputStream = new ByteArrayOutputStream();
+
+        try (PDDocument document = Loader.loadPDF(new RandomAccessReadBuffer(pdfFileContent))) {
+            var acroForm = document.getDocumentCatalog().getAcroForm();
+            acroForm.getField("FirstName").setValue("Prefill");
+            acroForm.getField("LastName").setValue("Prefillson");
+            acroForm.getField("Email").setValue("prefill@example.com");
+
+            document.save(byteArrayOutputStream, CompressParameters.DEFAULT_COMPRESSION);
+        }
+
+        return byteArrayOutputStream.toByteArray();
+    }
+
+    private void logPdfFormInfo(byte[] pdfFileContent) throws IOException {
+        log.info("------------ PDF form info START ----------------");
+        try (PDDocument document = Loader.loadPDF(new RandomAccessReadBuffer(pdfFileContent))) {
+            var acroForm = document.getDocumentCatalog().getAcroForm();
+            for (var pdField : acroForm.getFields()) {
+                log.info(pdField.toString());
+            }
+        }
+        log.info("------------- PDF form info END -----------------");
     }
 }
