@@ -24,14 +24,8 @@ public class PdfEndpoint {
     @GetMapping(produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<Resource> download(){
         log.info("Started downloading file: " + FILE_NAME + " | " + "size: " + FILE_CONTENT.length + " bytes");
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + FILE_NAME);
-
         var byteArrayResource = new ByteArrayResource(FILE_CONTENT);
-        byteArrayResource.contentLength();
-
         return ResponseEntity.ok()
-                .headers(headers)
                 .contentLength(byteArrayResource.contentLength())
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(byteArrayResource);
