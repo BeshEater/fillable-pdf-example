@@ -7,6 +7,9 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdfwriter.compress.CompressParameters;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.interactive.form.PDCheckBox;
+import org.apache.pdfbox.pdmodel.interactive.form.PDComboBox;
+import org.apache.pdfbox.pdmodel.interactive.form.PDRadioButton;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
@@ -65,6 +68,14 @@ public class PdfEndpoint {
             acroForm.getField("FirstName").setValue("Prefill");
             acroForm.getField("LastName").setValue("Prefillson");
             acroForm.getField("Email").setValue("prefill@example.com");
+            ((PDRadioButton) acroForm.getField("Color")).setValue("Blue");
+            ((PDCheckBox) acroForm.getField("Land")).check();
+            ((PDCheckBox) acroForm.getField("Water")).check();
+            ((PDComboBox) acroForm.getField("Options")).setValue("Large");
+            acroForm.getField("BigTextField1").setValue("Just some random text");
+            acroForm.getField("BigTextField2").setValue("More gibberish text");
+            acroForm.getField("FinalField").setValue("The end in near");
+            acroForm.getField("Date").setValue("2023-12-31");
 
             document.save(byteArrayOutputStream, CompressParameters.DEFAULT_COMPRESSION);
         }
