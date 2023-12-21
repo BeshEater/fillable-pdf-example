@@ -71,10 +71,10 @@ public class PdfEndpoint {
             ((PDRadioButton) acroForm.getField("Color")).setValue("Blue");
             ((PDCheckBox) acroForm.getField("Land")).check();
             ((PDCheckBox) acroForm.getField("Water")).check();
-            ((PDComboBox) acroForm.getField("Options")).setValue("Large");
+            ((PDComboBox) acroForm.getField("Options")).setValue("Crisp");
             acroForm.getField("BigTextField1").setValue("Just some random text");
             acroForm.getField("BigTextField2").setValue("More gibberish text");
-            acroForm.getField("FinalField").setValue("The end in near");
+            acroForm.getField("FinalField").setValue("The end");
             acroForm.getField("Date").setValue("2023-12-31");
 
             document.save(byteArrayOutputStream, CompressParameters.DEFAULT_COMPRESSION);
