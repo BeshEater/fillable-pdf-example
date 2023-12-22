@@ -39,8 +39,20 @@ public class PdfEndpoint {
                 .body(byteArrayResource);
     }
 
-    @GetMapping(value = "/prefilled", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<Resource> downloadPrefilled() throws IOException {
+    @GetMapping(value = "/flattened", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<Resource> downloadFlattened() throws IOException {
+        log.info("Started downloading flattened pdf file");
+        var flattenedPdfFile = flattenPdfFile(FILE_CONTENT);
+
+        var byteArrayResource = new ByteArrayResource(flattenedPdfFile);
+        return ResponseEntity.ok()
+                .contentLength(byteArrayResource.contentLength())
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(byteArrayResource);
+    }
+
+    @GetMapping(value = "/default-prefilled", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<Resource> downloadDefaultPrefilled() throws IOException {
         log.info("Started downloading file prefilled pdf file");
         var initialPdfFileContent = IOUtils.resourceToByteArray("/static/fillable_PDF_form_example.pdf");
         var prefilledPdfFileContent = prefillPdfFile(initialPdfFileContent);
@@ -58,6 +70,19 @@ public class PdfEndpoint {
         FILE_CONTENT = file.getBytes();
         logPdfFormInfo(file.getBytes());
         log.info("Successfully uploaded file: " + file.getOriginalFilename() + " | " + "size: " + file.getBytes().length + " bytes");
+    }
+
+    private byte[] flattenPdfFile(byte[] pdfFileContent) throws IOException {
+        var byteArrayOutputStream = new ByteArrayOutputStream();
+
+        try (PDDocument document = Loader.loadPDF(new RandomAccessReadBuffer(pdfFileContent))) {
+            var acroForm = document.getDocumentCatalog().getAcroForm();
+            acroForm.flatten();
+
+            document.save(byteArrayOutputStream, CompressParameters.DEFAULT_COMPRESSION);
+        }
+
+        return byteArrayOutputStream.toByteArray();
     }
 
     private byte[] prefillPdfFile(byte[] pdfFileContent) throws IOException {
