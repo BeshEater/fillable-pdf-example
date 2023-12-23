@@ -60,6 +60,13 @@ See https://github.com/adobe-type-tools/cmap-resources
       #outerContainer {
         background-color: var(--body-bg-color);
       }
+
+      /* Make checkbox X mark more thick */
+      .annotationLayer .buttonWidgetAnnotation.checkBox input:checked::before,
+      .annotationLayer .buttonWidgetAnnotation.checkBox input:checked::after{
+        width:3px;
+      }
+
     </style>
     <script>
       async function downloadPdfFileFromServer() {
