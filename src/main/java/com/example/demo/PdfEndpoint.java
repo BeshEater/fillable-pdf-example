@@ -16,7 +16,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.verapdf.gf.foundry.VeraGreenfieldFoundryProvider;
+import org.verapdf.pdfa.Foundries;
+import org.verapdf.pdfa.flavours.PDFAFlavour;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
@@ -29,9 +33,15 @@ public class PdfEndpoint {
     private static String FILE_NAME;
     private static byte[] FILE_CONTENT;
 
+    static {
+        // Initialize veraPDF validator
+        VeraGreenfieldFoundryProvider.initialise();
+    }
+
     @GetMapping(produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<Resource> download(){
-        log.info("Started downloading file: " + FILE_NAME + " | " + "size: " + FILE_CONTENT.length + " bytes");
+        log.info("Started downloading file: {} | size: {} bytes", FILE_NAME, FILE_CONTENT.length);
+        validatePdf(FILE_CONTENT);
         var byteArrayResource = new ByteArrayResource(FILE_CONTENT);
         return ResponseEntity.ok()
                 .contentLength(byteArrayResource.contentLength())
@@ -40,7 +50,7 @@ public class PdfEndpoint {
     }
 
     @GetMapping(value = "/flattened", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<Resource> downloadFlattened() throws IOException {
+    public ResponseEntity<Resource> downloadFlattened() {
         log.info("Started downloading flattened pdf file");
         var flattenedPdfFile = flattenPdfFile(FILE_CONTENT);
 
@@ -69,10 +79,10 @@ public class PdfEndpoint {
         FILE_NAME = file.getOriginalFilename();
         FILE_CONTENT = file.getBytes();
         logPdfFormInfo(file.getBytes());
-        log.info("Successfully uploaded file: " + file.getOriginalFilename() + " | " + "size: " + file.getBytes().length + " bytes");
+        log.info("Successfully uploaded file: {} | size: {} bytes", file.getOriginalFilename(), file.getBytes().length);
     }
 
-    private byte[] flattenPdfFile(byte[] pdfFileContent) throws IOException {
+    private byte[] flattenPdfFile(byte[] pdfFileContent) {
         var byteArrayOutputStream = new ByteArrayOutputStream();
 
         try (PDDocument document = Loader.loadPDF(new RandomAccessReadBuffer(pdfFileContent))) {
@@ -80,12 +90,14 @@ public class PdfEndpoint {
             acroForm.flatten();
 
             document.save(byteArrayOutputStream, CompressParameters.DEFAULT_COMPRESSION);
+        } catch (IOException ex) {
+            log.error("Error while flattening PDF file", ex);
         }
 
         return byteArrayOutputStream.toByteArray();
     }
 
-    private byte[] prefillPdfFile(byte[] pdfFileContent) throws IOException {
+    private byte[] prefillPdfFile(byte[] pdfFileContent) {
         var byteArrayOutputStream = new ByteArrayOutputStream();
 
         try (PDDocument document = Loader.loadPDF(new RandomAccessReadBuffer(pdfFileContent))) {
@@ -103,19 +115,37 @@ public class PdfEndpoint {
             acroForm.getField("Date").setValue("2023-12-31");
 
             document.save(byteArrayOutputStream, CompressParameters.DEFAULT_COMPRESSION);
+        } catch (IOException ex) {
+            log.error("Error while prefilling PDF file", ex);
         }
 
         return byteArrayOutputStream.toByteArray();
     }
 
-    private void logPdfFormInfo(byte[] pdfFileContent) throws IOException {
+    private void logPdfFormInfo(byte[] pdfFileContent) {
         log.info("------------ PDF form info START ----------------");
         try (PDDocument document = Loader.loadPDF(new RandomAccessReadBuffer(pdfFileContent))) {
             var acroForm = document.getDocumentCatalog().getAcroForm();
             for (var pdField : acroForm.getFields()) {
                 log.info(pdField.toString());
             }
+        } catch (IOException ex) {
+            log.error("Error while reading PDF form info", ex);
         }
         log.info("------------- PDF form info END -----------------");
+    }
+
+    private void validatePdf(byte[] pdfFileContent) {
+        var flavour = PDFAFlavour.PDFA_2_B;
+
+        try (var pdfFoundry = Foundries.defaultInstance();
+             var parser = pdfFoundry.createParser(new ByteArrayInputStream(pdfFileContent));
+             var validator = pdfFoundry.createValidator(flavour, false)
+        ) {
+            var result = validator.validate(parser);
+            log.info("Pdf validation results: {}", result);
+        } catch (Exception ex) {
+            log.error("Cannot validate pdf", ex);
+        }
     }
 }
